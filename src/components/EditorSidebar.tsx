@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { X, Plus, Image, Info, ChevronDown } from 'lucide-react';
+import { X, Plus, Image, Info } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface EditorSidebarProps {
