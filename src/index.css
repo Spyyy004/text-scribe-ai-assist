@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -35,19 +36,12 @@
     --radius: 0.5rem;
 
     --sidebar-background: 0 0% 98%;
-
     --sidebar-foreground: 240 5.3% 26.1%;
-
     --sidebar-primary: 240 5.9% 10%;
-
     --sidebar-primary-foreground: 0 0% 98%;
-
     --sidebar-accent: 240 4.8% 95.9%;
-
     --sidebar-accent-foreground: 240 5.9% 10%;
-
     --sidebar-border: 220 13% 91%;
-
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
 
@@ -98,4 +92,57 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* Tiptap editor styles */
+.ProseMirror {
+  @apply outline-none min-h-[200px] p-4 text-editor-text;
+}
+
+.ProseMirror p {
+  @apply mb-4 last:mb-0;
+}
+
+.ProseMirror h1 {
+  @apply text-3xl font-bold mb-4;
+}
+
+.ProseMirror h2 {
+  @apply text-2xl font-semibold mb-3;
+}
+
+.ProseMirror h3 {
+  @apply text-xl font-medium mb-2;
+}
+
+.ProseMirror ul, .ProseMirror ol {
+  @apply pl-6 mb-4;
+}
+
+.ProseMirror ul {
+  @apply list-disc;
+}
+
+.ProseMirror ol {
+  @apply list-decimal;
+}
+
+.ProseMirror blockquote {
+  @apply border-l-4 border-gray-300 pl-4 italic my-4;
+}
+
+.ProseMirror a {
+  @apply text-blue-600 underline;
+}
+
+.ProseMirror img {
+  @apply max-w-full h-auto;
+}
+
+.ProseMirror code {
+  @apply bg-gray-100 px-1 py-0.5 rounded font-mono text-sm;
+}
+
+.ProseMirror pre {
+  @apply bg-gray-100 p-4 rounded my-4 font-mono overflow-x-auto;
 }
