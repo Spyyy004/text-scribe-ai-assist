@@ -61,7 +61,7 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor }) => {
       </button>
       <button
         type="button"
-        onClick={() => editor.commands.alignment('left')}
+        onClick={() => editor.chain().focus().setTextAlign('left').run()}
         className={cn(
           "p-2 rounded hover:bg-gray-700 transition-colors",
           editor.isActive({ textAlign: 'left' }) ? 'bg-gray-700' : ''

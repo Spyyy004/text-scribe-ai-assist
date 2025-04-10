@@ -17,6 +17,7 @@ interface RichTextEditorProps {
 const RichTextEditor: React.FC<RichTextEditorProps> = ({ onSelectionLinks }) => {
   const [selectionPosition, setSelectionPosition] = useState<{ x: number; y: number } | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [processingRange, setProcessingRange] = useState<{ from: number; to: number } | null>(null);
 
   const editor = useEditor({
     extensions: [
@@ -59,6 +60,34 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ onSelectionLinks }) => 
     },
   });
 
+  // Apply shimmer effect to processing text
+  useEffect(() => {
+    if (!editor || !processingRange) return;
+    
+    const { from, to } = processingRange;
+    
+    // Add a temporary shimmer class to the selected text
+    const shimmerClass = 'shimmer-effect';
+    
+    const transaction = editor.state.tr;
+    transaction.addMark(
+      from,
+      to,
+      editor.schema.marks.textStyle.create({ class: shimmerClass })
+    );
+    
+    editor.view.dispatch(transaction);
+    
+    return () => {
+      if (editor && editor.isActive) {
+        // Remove the shimmer effect when processing is done
+        const removeTransaction = editor.state.tr;
+        removeTransaction.removeMark(from, to, editor.schema.marks.textStyle);
+        editor.view.dispatch(removeTransaction);
+      }
+    };
+  }, [editor, processingRange, isProcessing]);
+
   // Hide tooltip when clicking outside the editor
   useEffect(() => {
     const handleClickOutside = () => {
@@ -100,6 +129,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ onSelectionLinks }) => 
       ];
     } finally {
       setIsProcessing(false);
+      setProcessingRange(null);
     }
   };
 
@@ -123,7 +153,10 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ onSelectionLinks }) => 
     
     try {
       setIsProcessing(true);
+      setProcessingRange({ from, to });
+      
       const rewrittenText = await processText(selectedText, 'rewrite');
+      
       editor.chain().focus().deleteRange({ from, to }).insertContent(rewrittenText).run();
       setSelectionPosition(null);
       toast.success('Text rewritten successfully');
@@ -132,6 +165,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ onSelectionLinks }) => 
       console.error(error);
     } finally {
       setIsProcessing(false);
+      setProcessingRange(null);
     }
   };
 
@@ -148,7 +182,10 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ onSelectionLinks }) => 
     
     try {
       setIsProcessing(true);
+      setProcessingRange({ from, to });
+      
       const simplifiedText = await processText(selectedText, 'simplify');
+      
       editor.chain().focus().deleteRange({ from, to }).insertContent(simplifiedText).run();
       setSelectionPosition(null);
       toast.success('Text simplified successfully');
@@ -157,6 +194,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ onSelectionLinks }) => 
       console.error(error);
     } finally {
       setIsProcessing(false);
+      setProcessingRange(null);
     }
   };
 
