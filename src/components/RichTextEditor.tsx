@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
@@ -18,7 +18,8 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ onSelectionLinks }) => 
   const [selectionPosition, setSelectionPosition] = useState<{ x: number; y: number } | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingRange, setProcessingRange] = useState<{ from: number; to: number } | null>(null);
-  const [mouseUpHandled, setMouseUpHandled] = useState(false);
+  const selectionTimeoutRef = useRef<number | null>(null);
+  const lastOperationRef = useRef<{ from: number; to: number; timestamp: number } | null>(null);
 
   const editor = useEditor({
     extensions: [
@@ -35,10 +36,6 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ onSelectionLinks }) => 
       }),
     ],
     content: '<p>This is a new article. You can start editing it right away.</p><p>Use the sidebar to add tags, set a focus keyword, and customize your article\'s metadata.</p>',
-    onSelectionUpdate: ({ editor }) => {
-      // We'll handle the selection display logic in the mouseup event instead
-      // This prevents the tooltip from appearing during selection
-    },
   });
 
   // Apply shimmer effect to processing text
@@ -74,14 +71,30 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ onSelectionLinks }) => 
     const handleMouseUp = () => {
       if (!editor) return;
       
-      // Small delay to ensure selection is complete
-      setTimeout(() => {
+      // Clear any existing timeout
+      if (selectionTimeoutRef.current) {
+        window.clearTimeout(selectionTimeoutRef.current);
+      }
+      
+      // Set a new timeout to show the tooltip after a short delay
+      selectionTimeoutRef.current = window.setTimeout(() => {
         const { from, to } = editor.state.selection;
         
         if (from === to) {
           // No selection
           setSelectionPosition(null);
           return;
+        }
+        
+        // Prevent tooltip from immediately reappearing after an operation
+        if (lastOperationRef.current) {
+          const { from: lastFrom, to: lastTo, timestamp } = lastOperationRef.current;
+          const now = Date.now();
+          
+          // If we just performed an operation on this same selection within the last second
+          if (from === lastFrom && to === lastTo && now - timestamp < 1000) {
+            return;
+          }
         }
 
         const view = editor.view;
@@ -98,7 +111,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ onSelectionLinks }) => 
             });
           }
         }
-      }, 50);
+      }, 150); // Small delay to ensure selection is stable
     };
 
     // Add mouseup event listener to the editor DOM element
@@ -110,6 +123,9 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ onSelectionLinks }) => 
     return () => {
       if (editorElement) {
         editorElement.removeEventListener('mouseup', handleMouseUp);
+      }
+      if (selectionTimeoutRef.current) {
+        window.clearTimeout(selectionTimeoutRef.current);
       }
     };
   }, [editor]);
@@ -181,6 +197,11 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ onSelectionLinks }) => 
     const { from, to } = editor.state.selection;
     
     try {
+      // Record this operation to prevent immediate tooltip reappearance
+      lastOperationRef.current = { from, to, timestamp: Date.now() };
+      
+      // Hide tooltip while processing
+      setSelectionPosition(null);
       setIsProcessing(true);
       setProcessingRange({ from, to });
       
@@ -188,9 +209,10 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ onSelectionLinks }) => 
       const rewrittenText = await processText(selectedText, 'rewrite');
       console.log("Received rewritten text:", rewrittenText);
       
-      editor.chain().focus().deleteRange({ from, to }).insertContent(rewrittenText).run();
-      setSelectionPosition(null);
-      toast.success('Text rewritten successfully');
+      if (editor && editor.isActive) {
+        editor.chain().focus().deleteRange({ from, to }).insertContent(rewrittenText).run();
+        toast.success('Text rewritten successfully');
+      }
     } catch (error) {
       console.error("Error in handleRewrite:", error);
       toast.error('Failed to rewrite text');
@@ -212,6 +234,11 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ onSelectionLinks }) => 
     const { from, to } = editor.state.selection;
     
     try {
+      // Record this operation to prevent immediate tooltip reappearance
+      lastOperationRef.current = { from, to, timestamp: Date.now() };
+      
+      // Hide tooltip while processing
+      setSelectionPosition(null);
       setIsProcessing(true);
       setProcessingRange({ from, to });
       
@@ -219,9 +246,10 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ onSelectionLinks }) => 
       const simplifiedText = await processText(selectedText, 'simplify');
       console.log("Received simplified text:", simplifiedText);
       
-      editor.chain().focus().deleteRange({ from, to }).insertContent(simplifiedText).run();
-      setSelectionPosition(null);
-      toast.success('Text simplified successfully');
+      if (editor && editor.isActive) {
+        editor.chain().focus().deleteRange({ from, to }).insertContent(simplifiedText).run();
+        toast.success('Text simplified successfully');
+      }
     } catch (error) {
       console.error("Error in handleSimplify:", error);
       toast.error('Failed to simplify text');
@@ -241,9 +269,15 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ onSelectionLinks }) => 
     }
     
     try {
+      // Record this operation to prevent immediate tooltip reappearance
+      const { from, to } = editor.state.selection;
+      lastOperationRef.current = { from, to, timestamp: Date.now() };
+      
+      // Hide tooltip while processing
+      setSelectionPosition(null);
+      
       const links = await mockFindLinks(selectedText);
       onSelectionLinks(links);
-      setSelectionPosition(null);
       toast.success('Found related links');
     } catch (error) {
       toast.error('Failed to find related links');

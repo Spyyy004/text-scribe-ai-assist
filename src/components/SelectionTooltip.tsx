@@ -29,6 +29,26 @@ const SelectionTooltip: React.FC<SelectionTooltipProps> = ({
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   
   if (!position) return null;
+  
+  const handleRewriteClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onRewrite();
+    // Don't close dropdown here to prevent re-opening
+  };
+  
+  const handleSimplifyClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onSimplify();
+    // Don't close dropdown here to prevent re-opening
+  };
+  
+  const handleFindLinksClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onFindLinks();
+  };
 
   return (
     <div 
@@ -49,13 +69,13 @@ const SelectionTooltip: React.FC<SelectionTooltipProps> = ({
               <ChevronDown className="h-3.5 w-3.5 ml-0.5" />
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent className="w-56">
+          <DropdownMenuContent className="w-56" onCloseAutoFocus={(e) => e.preventDefault()}>
             <DropdownMenuGroup>
-              <DropdownMenuItem onClick={onSimplify} disabled={isLoading}>
+              <DropdownMenuItem onClick={handleSimplifyClick} disabled={isLoading}>
                 <FileText className="h-4 w-4 mr-2" />
                 <span>Simplify</span>
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={onRewrite} disabled={isLoading}>
+              <DropdownMenuItem onClick={handleRewriteClick} disabled={isLoading}>
                 <Sparkles className="h-4 w-4 mr-2" />
                 <span>Re-write</span>
               </DropdownMenuItem>
@@ -98,7 +118,7 @@ const SelectionTooltip: React.FC<SelectionTooltipProps> = ({
                 "flex items-center gap-1 px-3 py-1.5 rounded hover:bg-gray-100 text-sm font-medium",
                 isLoading && "opacity-50 cursor-not-allowed"
               )}
-              onClick={onFindLinks}
+              onClick={handleFindLinksClick}
               disabled={isLoading}
             >
               <span>Add Links</span>
