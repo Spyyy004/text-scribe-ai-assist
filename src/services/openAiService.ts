@@ -14,7 +14,7 @@ interface OpenAIResponse {
 }
 
 export const processText = async (text: string, operation: 'rewrite' | 'simplify'): Promise<string> => {
-  console.log(`Processing text with operation: ${operation}`);
+  console.log(`Processing text with operation: ${operation}`, text);
   
   const prompt = operation === 'rewrite' 
     ? `Rewrite the following text to be more engaging and professional, but keep the main points: "${text}"`
@@ -61,6 +61,10 @@ export const processText = async (text: string, operation: 'rewrite' | 'simplify
     const data = await response.json() as OpenAIResponse;
     console.log("Response data:", data);
     
+    if (!data.choices || !data.choices[0] || !data.choices[0].message || !data.choices[0].message.content) {
+      throw new Error('Invalid response format from OpenAI API');
+    }
+
     return data.choices[0].message.content.trim();
   } catch (error) {
     console.error('Error processing text with OpenAI:', error);

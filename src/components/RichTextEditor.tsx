@@ -18,6 +18,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ onSelectionLinks }) => 
   const [selectionPosition, setSelectionPosition] = useState<{ x: number; y: number } | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingRange, setProcessingRange] = useState<{ from: number; to: number } | null>(null);
+  const [mouseUpHandled, setMouseUpHandled] = useState(false);
 
   const editor = useEditor({
     extensions: [
@@ -35,28 +36,8 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ onSelectionLinks }) => 
     ],
     content: '<p>This is a new article. You can start editing it right away.</p><p>Use the sidebar to add tags, set a focus keyword, and customize your article\'s metadata.</p>',
     onSelectionUpdate: ({ editor }) => {
-      const { from, to } = editor.state.selection;
-      
-      if (from === to) {
-        // No selection
-        setSelectionPosition(null);
-        return;
-      }
-
-      const view = editor.view;
-      const { node } = view.domAtPos(from);
-      
-      if (node && node.nodeType === Node.TEXT_NODE && node.parentElement) {
-        const domRect = node.parentElement.getBoundingClientRect();
-        const editorRect = document.querySelector('.ProseMirror')?.getBoundingClientRect();
-        
-        if (editorRect) {
-          setSelectionPosition({
-            x: domRect.left + domRect.width / 2 - editorRect.left,
-            y: domRect.top - editorRect.top
-          });
-        }
-      }
+      // We'll handle the selection display logic in the mouseup event instead
+      // This prevents the tooltip from appearing during selection
     },
   });
 
@@ -88,10 +69,58 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ onSelectionLinks }) => 
     };
   }, [editor, processingRange, isProcessing]);
 
+  // Show selection tooltip after mouse up (when selection is complete)
+  useEffect(() => {
+    const handleMouseUp = () => {
+      if (!editor) return;
+      
+      // Small delay to ensure selection is complete
+      setTimeout(() => {
+        const { from, to } = editor.state.selection;
+        
+        if (from === to) {
+          // No selection
+          setSelectionPosition(null);
+          return;
+        }
+
+        const view = editor.view;
+        const { node } = view.domAtPos(from);
+        
+        if (node && node.nodeType === Node.TEXT_NODE && node.parentElement) {
+          const domRect = node.parentElement.getBoundingClientRect();
+          const editorRect = document.querySelector('.ProseMirror')?.getBoundingClientRect();
+          
+          if (editorRect) {
+            setSelectionPosition({
+              x: domRect.left + domRect.width / 2 - editorRect.left,
+              y: domRect.top - editorRect.top
+            });
+          }
+        }
+      }, 50);
+    };
+
+    // Add mouseup event listener to the editor DOM element
+    const editorElement = document.querySelector('.ProseMirror');
+    if (editorElement) {
+      editorElement.addEventListener('mouseup', handleMouseUp);
+    }
+
+    return () => {
+      if (editorElement) {
+        editorElement.removeEventListener('mouseup', handleMouseUp);
+      }
+    };
+  }, [editor]);
+
   // Hide tooltip when clicking outside the editor
   useEffect(() => {
-    const handleClickOutside = () => {
-      setSelectionPosition(null);
+    const handleClickOutside = (event: MouseEvent) => {
+      const editorElement = document.querySelector('.ProseMirror');
+      if (editorElement && !editorElement.contains(event.target as Node)) {
+        setSelectionPosition(null);
+      }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
@@ -155,14 +184,16 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ onSelectionLinks }) => 
       setIsProcessing(true);
       setProcessingRange({ from, to });
       
+      console.log("Calling processText with operation: rewrite");
       const rewrittenText = await processText(selectedText, 'rewrite');
+      console.log("Received rewritten text:", rewrittenText);
       
       editor.chain().focus().deleteRange({ from, to }).insertContent(rewrittenText).run();
       setSelectionPosition(null);
       toast.success('Text rewritten successfully');
     } catch (error) {
+      console.error("Error in handleRewrite:", error);
       toast.error('Failed to rewrite text');
-      console.error(error);
     } finally {
       setIsProcessing(false);
       setProcessingRange(null);
@@ -184,14 +215,16 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ onSelectionLinks }) => 
       setIsProcessing(true);
       setProcessingRange({ from, to });
       
+      console.log("Calling processText with operation: simplify");
       const simplifiedText = await processText(selectedText, 'simplify');
+      console.log("Received simplified text:", simplifiedText);
       
       editor.chain().focus().deleteRange({ from, to }).insertContent(simplifiedText).run();
       setSelectionPosition(null);
       toast.success('Text simplified successfully');
     } catch (error) {
+      console.error("Error in handleSimplify:", error);
       toast.error('Failed to simplify text');
-      console.error(error);
     } finally {
       setIsProcessing(false);
       setProcessingRange(null);
