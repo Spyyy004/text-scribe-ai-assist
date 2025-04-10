@@ -96,7 +96,13 @@
 @layer components {
   /* Shimmer effect for text processing */
   .shimmer-effect {
-    @apply relative overflow-hidden bg-gradient-to-r from-transparent via-gray-300 to-transparent;
+    @apply relative overflow-hidden;
+    background: linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0) 0%,
+      rgba(235, 235, 235, 0.8) 50%,
+      rgba(255, 255, 255, 0) 100%
+    );
     background-size: 200% 100%;
     animation: shimmer 1.5s infinite linear;
   }

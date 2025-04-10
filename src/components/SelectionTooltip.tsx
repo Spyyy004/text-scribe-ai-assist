@@ -1,7 +1,15 @@
 
-import React from 'react';
-import { Wand2, Lightbulb, Search } from 'lucide-react';
+import React, { useState } from 'react';
+import { Sparkles, FileText, ArrowUp, ArrowDown, ListIcon, Table, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 interface SelectionTooltipProps {
   onRewrite: () => void;
@@ -18,50 +26,101 @@ const SelectionTooltip: React.FC<SelectionTooltipProps> = ({
   position,
   isLoading
 }) => {
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  
   if (!position) return null;
 
   return (
     <div 
-      className="absolute bg-white shadow-lg rounded-md border border-gray-200 p-1 flex items-center gap-1 animate-fade-in z-10"
+      className="absolute bg-white shadow-lg rounded-md border border-gray-200 z-10"
       style={{ 
         left: `${position.x}px`, 
         top: `${position.y - 40}px`,
         transform: 'translateX(-50%)'
       }}
     >
-      <button
-        className={cn(
-          "flex items-center gap-1 px-2 py-1.5 rounded hover:bg-gray-100 text-sm text-gray-700",
-          isLoading && "opacity-50 cursor-not-allowed"
-        )}
-        onClick={onRewrite}
-        disabled={isLoading}
-      >
-        <Wand2 className="h-3.5 w-3.5" />
-        <span>Rewrite</span>
-      </button>
-      <button
-        className={cn(
-          "flex items-center gap-1 px-2 py-1.5 rounded hover:bg-gray-100 text-sm text-gray-700",
-          isLoading && "opacity-50 cursor-not-allowed"
-        )}
-        onClick={onSimplify}
-        disabled={isLoading}
-      >
-        <Lightbulb className="h-3.5 w-3.5" />
-        <span>Simplify</span>
-      </button>
-      <button
-        className={cn(
-          "flex items-center gap-1 px-2 py-1.5 rounded hover:bg-gray-100 text-sm text-gray-700",
-          isLoading && "opacity-50 cursor-not-allowed"
-        )}
-        onClick={onFindLinks}
-        disabled={isLoading}
-      >
-        <Search className="h-3.5 w-3.5" />
-        <span>Find Links</span>
-      </button>
+      <div className="flex items-center gap-1 p-1">
+        {/* Primary options in the main toolbar */}
+        <DropdownMenu open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
+          <DropdownMenuTrigger asChild>
+            <button className="flex items-center gap-1 px-3 py-1.5 rounded hover:bg-gray-100 text-sm font-medium">
+              <Sparkles className="h-4 w-4 text-amber-500" />
+              <span>Rewrite</span>
+              <ChevronDown className="h-3.5 w-3.5 ml-0.5" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent className="w-56">
+            <DropdownMenuGroup>
+              <DropdownMenuItem onClick={onSimplify} disabled={isLoading}>
+                <FileText className="h-4 w-4 mr-2" />
+                <span>Simplify</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={onRewrite} disabled={isLoading}>
+                <Sparkles className="h-4 w-4 mr-2" />
+                <span>Re-write</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem disabled={isLoading}>
+                <ArrowUp className="h-4 w-4 mr-2" />
+                <span>Make Longer</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem disabled={isLoading}>
+                <ArrowDown className="h-4 w-4 mr-2" />
+                <span>Make Shorter</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem disabled={isLoading}>
+                <ListIcon className="h-4 w-4 mr-2" />
+                <span>Make List</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem disabled={isLoading}>
+                <Table className="h-4 w-4 mr-2" />
+                <span>Make Table</span>
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        <Popover>
+          <PopoverTrigger asChild>
+            <button className="flex items-center gap-1 px-3 py-1.5 rounded hover:bg-gray-100 text-sm font-medium">
+              <span>Add Keywords</span>
+              <ChevronDown className="h-3.5 w-3.5" />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent className="w-64 p-2">
+            <p className="text-sm text-gray-500">Add keywords functionality coming soon</p>
+          </PopoverContent>
+        </Popover>
+
+        <Popover>
+          <PopoverTrigger asChild>
+            <button 
+              className={cn(
+                "flex items-center gap-1 px-3 py-1.5 rounded hover:bg-gray-100 text-sm font-medium",
+                isLoading && "opacity-50 cursor-not-allowed"
+              )}
+              onClick={onFindLinks}
+              disabled={isLoading}
+            >
+              <span>Add Links</span>
+              <ChevronDown className="h-3.5 w-3.5" />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent className="w-64 p-2">
+            <p className="text-sm text-gray-500">Find related links for your content</p>
+          </PopoverContent>
+        </Popover>
+      </div>
+
+      {/* AI Assistant Input */}
+      <div className="mx-2 mb-2 mt-1">
+        <div className="w-full rounded-lg border border-purple-300 bg-white px-3 py-2 flex justify-between items-center">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-purple-500" />
+            <span className="text-gray-500 text-sm">Ask AI to edit or generate</span>
+          </div>
+          <span className="text-xs text-gray-400">⌘+/</span>
+        </div>
+      </div>
     </div>
   );
 };
