@@ -33,7 +33,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ onSelectionLinks }) => 
         openOnClick: false,
       }),
     ],
-    content: '<p>This is a new article. You can start editing it right away.</p><p>Use the sidebar to add tags, <span style="color: blue; text-decoration: underline;">set a focus keyword</span>, and customize your article\'s metadata.</p>',
+    content: '<p>This is a new article. You can start editing it right away.</p><p>Use the sidebar to add tags, set a focus keyword, and customize your article\'s metadata.</p>',
     onSelectionUpdate: ({ editor }) => {
       const { from, to } = editor.state.selection;
       
@@ -222,8 +222,8 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ onSelectionLinks }) => 
       <div className="px-4 py-3 border-b">
         <EditorToolbar editor={editor} />
       </div>
-      <div className="flex-1 overflow-auto relative p-6">
-        <EditorContent editor={editor} className="h-full max-w-4xl mx-auto" />
+      <div className="flex-1 overflow-auto relative">
+        <EditorContent editor={editor} className="h-full" />
         <SelectionTooltip
           position={selectionPosition}
           onRewrite={handleRewrite}

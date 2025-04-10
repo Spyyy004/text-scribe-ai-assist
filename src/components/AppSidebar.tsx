@@ -1,15 +1,14 @@
 
 import React from 'react';
 import { 
-  FileText, 
+  Book, 
   Rocket, 
   Sliders, 
   Share2, 
   Award, 
   Calendar, 
   ShoppingCart, 
-  Users,
-  ChevronDown
+  Users 
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { 
@@ -24,64 +23,46 @@ import {
 
 export function AppSidebar() {
   return (
-    <Sidebar className="border-r">
+    <Sidebar>
       <SidebarHeader>
-        <div className="px-3 py-3 flex items-center">
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 bg-black rounded-md flex items-center justify-center">
-              <span className="text-white text-sm font-bold">J</span>
-            </div>
-            <h2 className="text-lg font-bold">Journalist AI</h2>
-          </div>
-          <div className="ml-auto flex items-center gap-1 text-sm border rounded-md px-2 py-1">
-            <span>Default Workspace</span>
-            <ChevronDown className="h-4 w-4" />
-          </div>
+        <div className="px-3 py-2">
+          <h2 className="text-xl font-bold">Content Hub</h2>
         </div>
       </SidebarHeader>
       
       <SidebarContent>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton tooltip="Articles" className="flex justify-between">
-              <div className="flex items-center">
-                <FileText className="h-5 w-5 mr-2" />
-                <span>Articles</span>
-              </div>
-              <ChevronDown className="h-4 w-4" />
+            <SidebarMenuButton tooltip="Articles">
+              <Book className="h-5 w-5" />
+              <span>Articles</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
           
-          <div className="pl-8 flex flex-col space-y-1 text-sm py-1">
-            <a href="#" className="text-gray-600 hover:text-gray-900 py-1">Generate Articles</a>
-            <a href="#" className="text-gray-600 hover:text-gray-900 py-1 border-l-2 border-purple-600 pl-2">All Articles</a>
-            <a href="#" className="text-gray-600 hover:text-gray-900 py-1">AI SEO Editor</a>
-          </div>
-          
           <SidebarMenuItem>
             <SidebarMenuButton tooltip="Blog Automation">
-              <Rocket className="h-5 w-5 mr-2" />
+              <Rocket className="h-5 w-5" />
               <span>Blog Automation</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
           
           <SidebarMenuItem>
             <SidebarMenuButton tooltip="Customization">
-              <Sliders className="h-5 w-5 mr-2" />
+              <Sliders className="h-5 w-5" />
               <span>Customization</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
           
           <SidebarMenuItem>
             <SidebarMenuButton tooltip="Social Media">
-              <Share2 className="h-5 w-5 mr-2" />
+              <Share2 className="h-5 w-5" />
               <span>Social Media</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
           
           <SidebarMenuItem>
             <SidebarMenuButton tooltip="Lead Magnets">
-              <Award className="h-5 w-5 mr-2" />
+              <Award className="h-5 w-5" />
               <span>Lead Magnets</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
