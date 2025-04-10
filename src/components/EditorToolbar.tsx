@@ -61,7 +61,7 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor }) => {
       </button>
       <button
         type="button"
-        onClick={() => editor.chain().focus().setTextAlign('left').run()}
+        onClick={() => editor.commands.alignment('left')}
         className={cn(
           "p-2 rounded hover:bg-gray-700 transition-colors",
           editor.isActive({ textAlign: 'left' }) ? 'bg-gray-700' : ''
@@ -75,7 +75,7 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor }) => {
         onClick={() => {
           const url = window.prompt('URL:');
           if (url) {
-            editor.chain().focus().setLink({ href: url }).run();
+            editor.commands.setLink({ href: url });
           }
         }}
         className={cn(

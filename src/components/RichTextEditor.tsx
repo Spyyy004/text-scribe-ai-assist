@@ -3,9 +3,12 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
+import TextAlign from '@tiptap/extension-text-align';
+import Link from '@tiptap/extension-link';
 import EditorToolbar from './EditorToolbar';
 import SelectionTooltip from './SelectionTooltip';
 import { toast } from 'sonner';
+import { processText } from '@/services/openAiService';
 
 interface RichTextEditorProps {
   onSelectionLinks: (links: Array<{ title: string; url: string }> | null) => void;
@@ -20,6 +23,13 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ onSelectionLinks }) => 
       StarterKit,
       Placeholder.configure({
         placeholder: 'Start writing your article...',
+      }),
+      TextAlign.configure({
+        types: ['paragraph', 'heading'],
+        alignments: ['left', 'center', 'right'],
+      }),
+      Link.configure({
+        openOnClick: false,
       }),
     ],
     content: '<p>This is a new article. You can start editing it right away.</p><p>Use the sidebar to add tags, set a focus keyword, and customize your article\'s metadata.</p>',
@@ -60,42 +70,6 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ onSelectionLinks }) => 
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
-
-  // Mock API call for text rewriting
-  const mockTextProcessing = async (text: string, operation: 'rewrite' | 'simplify') => {
-    setIsProcessing(true);
-    
-    try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      let result = text;
-      
-      if (operation === 'rewrite') {
-        // Mock rewrite logic
-        result = text
-          .split(' ')
-          .map(word => 
-            word.length > 3 ? 
-              word.charAt(0).toUpperCase() + word.slice(1) : 
-              word
-          )
-          .join(' ');
-      } else {
-        // Mock simplify logic
-        result = text
-          .split('.')
-          .map(sentence => sentence.trim())
-          .filter(sentence => sentence.length > 0)
-          .map(sentence => sentence.split(' ').slice(0, 8).join(' ') + '.')
-          .join(' ');
-      }
-      
-      return result;
-    } finally {
-      setIsProcessing(false);
-    }
-  };
 
   // Mock API call for finding related links
   const mockFindLinks = async (text: string) => {
@@ -148,12 +122,16 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ onSelectionLinks }) => 
     const { from, to } = editor.state.selection;
     
     try {
-      const rewrittenText = await mockTextProcessing(selectedText, 'rewrite');
+      setIsProcessing(true);
+      const rewrittenText = await processText(selectedText, 'rewrite');
       editor.chain().focus().deleteRange({ from, to }).insertContent(rewrittenText).run();
       setSelectionPosition(null);
       toast.success('Text rewritten successfully');
     } catch (error) {
       toast.error('Failed to rewrite text');
+      console.error(error);
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -169,12 +147,16 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ onSelectionLinks }) => 
     const { from, to } = editor.state.selection;
     
     try {
-      const simplifiedText = await mockTextProcessing(selectedText, 'simplify');
+      setIsProcessing(true);
+      const simplifiedText = await processText(selectedText, 'simplify');
       editor.chain().focus().deleteRange({ from, to }).insertContent(simplifiedText).run();
       setSelectionPosition(null);
       toast.success('Text simplified successfully');
     } catch (error) {
       toast.error('Failed to simplify text');
+      console.error(error);
+    } finally {
+      setIsProcessing(false);
     }
   };
 
