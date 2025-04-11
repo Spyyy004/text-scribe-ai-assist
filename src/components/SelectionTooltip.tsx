@@ -1,13 +1,26 @@
-import React from 'react';
+
+import React, { useState } from 'react';
 import {
   Sparkles,
   FileText,
-  Link as LinkIcon
+  Link as LinkIcon,
+  ChevronDown,
+  ArrowDownWide,
+  ArrowUpWide,
+  ListIcon,
+  Table2,
+  Pencil
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface SelectionTooltipProps {
-  onRewrite: (e: React.MouseEvent<HTMLButtonElement>) => void; // Keep event type consistent
+  onRewrite: (e: React.MouseEvent<HTMLButtonElement>) => void;
   onSimplify: () => void;
   onFindLinks: () => void;
   position: { x: number; y: number } | null;
@@ -21,88 +34,167 @@ const SelectionTooltip: React.FC<SelectionTooltipProps> = ({
   position,
   isLoading
 }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  
   if (!position) return null;
-  
-  const handleRewriteClick = (e: React.MouseEvent) => {
+
+  // Define additional actions that would be implemented later
+  const handleMakeLonger = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    onRewrite();
-    // Don't close dropdown here to prevent re-opening
-  };
-  
-  const handleSimplifyClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    onSimplify();
-    // Don't close dropdown here to prevent re-opening
-  };
-  
-  const handleFindLinksClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    onFindLinks();
+    console.log('Make Longer clicked');
+    // Implementation would go here
   };
 
+  const handleMakeShorter = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log('Make Shorter clicked');
+    // Implementation would go here
+  };
+
+  const handleMakeList = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log('Make List clicked');
+    // Implementation would go here
+  };
+
+  const handleMakeTable = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log('Make Table clicked');
+    // Implementation would go here
+  };
+  
   return (
-    <div
-      // Add a specific class here
-      className="absolute bg-white shadow-md rounded-md border border-gray-200 z-50 flex flex-col gap-1 p-2 w-max selection-tooltip-container"
-      style={{
-        left: `${position.x}px`,
-        top: `${position.y - 50}px`, // Adjust vertical offset as needed
-        transform: 'translateX(-50%)'
-      }}
-    >
-      {/* Re-write */}
-      <button
-        onClick={(e) => {
-          console.log('🔥 Rewriting button clicked...');
-          e.stopPropagation(); // Prevent event from bubbling further up if needed
-          onRewrite(e);        // Call the passed handler
-        }}
-        disabled={isLoading}
-        className={cn(
-          "flex items-center gap-2 px-3 py-1 rounded hover:bg-gray-100 text-sm",
-          isLoading && "opacity-50 cursor-not-allowed"
-        )}
-      >
-        <Sparkles className="h-4 w-4 text-purple-500" />
-        Rewrite
-      </button>
+    <div className="absolute z-50" style={{
+      left: `${position.x}px`,
+      top: `${position.y - 50}px`, 
+      transform: 'translateX(-50%)'
+    }}>
+      {/* Main toolbar with buttons and dropdowns */}
+      <div className="flex items-center space-x-2 bg-white rounded-lg shadow-md p-2">
+        {/* Rewrite dropdown button */}
+        <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
+          <DropdownMenuTrigger asChild disabled={isLoading}>
+            <button 
+              className={cn(
+                "flex items-center gap-1 px-3 py-1.5 rounded-md hover:bg-gray-100 text-sm",
+                isLoading && "opacity-50 cursor-not-allowed"
+              )}
+              onClick={(e) => {
+                e.stopPropagation();
+              }}
+            >
+              <Sparkles className="h-4 w-4 text-amber-500" />
+              <span>Rewrite</span>
+              <ChevronDown className="h-3 w-3 ml-1" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent 
+            className="bg-white rounded-md shadow-lg border border-gray-200 p-1 min-w-[200px]" 
+            onClick={(e) => e.stopPropagation()}
+          >
+            <DropdownMenuItem 
+              className="flex items-center gap-2 px-3 py-2 rounded hover:bg-gray-100 text-sm cursor-pointer"
+              onClick={(e) => {
+                e.stopPropagation();
+                onSimplify();
+              }}
+            >
+              <FileText className="h-4 w-4 text-gray-500" />
+              <span>Simplify</span>
+            </DropdownMenuItem>
+            
+            <DropdownMenuItem 
+              className="flex items-center gap-2 px-3 py-2 rounded hover:bg-gray-100 text-sm cursor-pointer"
+              onClick={(e) => {
+                e.stopPropagation();
+                onRewrite(e as any);
+              }}
+            >
+              <Pencil className="h-4 w-4 text-gray-500" />
+              <span>Re-write</span>
+            </DropdownMenuItem>
+            
+            <DropdownMenuItem 
+              className="flex items-center gap-2 px-3 py-2 rounded hover:bg-gray-100 text-sm cursor-pointer"
+              onClick={handleMakeLonger}
+            >
+              <ArrowDownWide className="h-4 w-4 text-gray-500" />
+              <span>Make Longer</span>
+            </DropdownMenuItem>
+            
+            <DropdownMenuItem 
+              className="flex items-center gap-2 px-3 py-2 rounded hover:bg-gray-100 text-sm cursor-pointer"
+              onClick={handleMakeShorter}
+            >
+              <ArrowUpWide className="h-4 w-4 text-gray-500" />
+              <span>Make Shorter</span>
+            </DropdownMenuItem>
+            
+            <DropdownMenuItem 
+              className="flex items-center gap-2 px-3 py-2 rounded hover:bg-gray-100 text-sm cursor-pointer"
+              onClick={handleMakeList}
+            >
+              <ListIcon className="h-4 w-4 text-gray-500" />
+              <span>Make List</span>
+            </DropdownMenuItem>
+            
+            <DropdownMenuItem 
+              className="flex items-center gap-2 px-3 py-2 rounded hover:bg-gray-100 text-sm cursor-pointer"
+              onClick={handleMakeTable}
+            >
+              <Table2 className="h-4 w-4 text-gray-500" />
+              <span>Make Table</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
 
-      {/* Simplify */}
-      <button
-        onClick={(e) => { // Add event propagation stop here too for consistency
-          console.log('🧠 Simplifying button clicked...');
-          e.stopPropagation();
-          onSimplify();
-        }}
-        disabled={isLoading}
-        className={cn(
-          "flex items-center gap-2 px-3 py-1 rounded hover:bg-gray-100 text-sm",
-          isLoading && "opacity-50 cursor-not-allowed"
-        )}
-      >
-        <FileText className="h-4 w-4 text-blue-500" />
-        Simplify
-      </button>
+        {/* Add Keywords Button */}
+        <button
+          className="flex items-center gap-1 px-3 py-1.5 rounded-md hover:bg-gray-100 text-sm"
+          disabled={isLoading}
+          onClick={(e) => {
+            e.stopPropagation();
+            console.log('Add Keywords clicked');
+          }}
+        >
+          <span>Add Keywords</span>
+          <ChevronDown className="h-3 w-3 ml-1" />
+        </button>
 
-      {/* Find Links */}
-      <button
-        onClick={(e) => { // Add event propagation stop here too for consistency
-          console.log('🔗 Finding links button clicked...');
-          e.stopPropagation();
-          onFindLinks();
-        }}
-        disabled={isLoading}
-        className={cn(
-          "flex items-center gap-2 px-3 py-1 rounded hover:bg-gray-100 text-sm",
-          isLoading && "opacity-50 cursor-not-allowed"
-        )}
-      >
-        <LinkIcon className="h-4 w-4 text-green-500" />
-        Find Links
-      </button>
+        {/* Add Links Button */}
+        <button
+          className="flex items-center gap-1 px-3 py-1.5 rounded-md hover:bg-gray-100 text-sm"
+          disabled={isLoading}
+          onClick={(e) => {
+            e.stopPropagation();
+            onFindLinks();
+          }}
+        >
+          <span>Add Links</span>
+          <ChevronDown className="h-3 w-3 ml-1" />
+        </button>
+      </div>
+      
+      {/* AI Command Input - Below the toolbar */}
+      <div className="mt-2 w-full">
+        <div className="relative flex items-center border border-purple-300 bg-white rounded-lg shadow-md">
+          <Sparkles className="absolute left-3 h-4 w-4 text-purple-500" />
+          <input
+            type="text"
+            placeholder="Ask AI to edit or generate"
+            className="flex-1 pl-10 pr-10 py-3 text-sm rounded-lg border-0 focus:outline-none focus:ring-0"
+            onClick={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
+          />
+          <div className="absolute right-3 text-xs bg-gray-100 px-1.5 py-0.5 rounded text-gray-500">
+            ⌘+/
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
