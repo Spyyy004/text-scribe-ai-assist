@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import {
   Sparkles,
@@ -63,12 +64,13 @@ const SelectionTooltip: React.FC<SelectionTooltipProps> = ({
   const [foundLinks, setFoundLinks] = useState<FoundLink[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Reset mode if position changes (i.e., selection changes or tooltip disappears)
+  // Reset state when tooltip appears/disappears
   useEffect(() => {
     if (!position) {
         setMode('default');
         setFoundLinks([]);
         setErrorMessage(null);
+        setIsRewriteDropdownOpen(false); // Also reset dropdown state
     }
   }, [position]);
 
@@ -96,8 +98,7 @@ const SelectionTooltip: React.FC<SelectionTooltipProps> = ({
 
   const handleApplyLinkClick = (url: string, title?: string) => {
     onApplyLink(url, title); // Tell parent to apply the link
-    setMode('default'); // Reset tooltip state
-    setFoundLinks([]);
+    // Don't reset states here - parent will hide the tooltip
   };
 
   const handleBackOrCancel = () => {
@@ -135,13 +136,13 @@ const SelectionTooltip: React.FC<SelectionTooltipProps> = ({
               <ChevronDown className="h-3 w-3 ml-0.5 text-gray-500" />
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent /* ... Dropdown items remain the same as before ... */
+          <DropdownMenuContent 
              className="bg-white rounded-md shadow-lg border border-gray-200 p-1 min-w-[180px]"
              onClick={(e) => e.stopPropagation()}
              onCloseAutoFocus={(e) => e.preventDefault()}
            >
             {/* Simplify Item */}
-            <DropdownMenuItem /* ...className, disabled, onClick... */
+            <DropdownMenuItem
                 className="flex items-center gap-2 px-3 py-1.5 rounded hover:bg-gray-100 text-sm cursor-pointer focus:bg-gray-100 focus:text-accent-foreground"
                 disabled={isLoading || mode === 'findingLinks'}
                 onClick={() => { if (!isLoading && mode !== 'findingLinks') { onSimplify(); setIsRewriteDropdownOpen(false); } }}
@@ -198,7 +199,7 @@ const SelectionTooltip: React.FC<SelectionTooltipProps> = ({
         </DropdownMenu>
 
         {/* Add Keywords Button (Placeholder) */}
-        <button className={cn( /* ... */ "opacity-50 cursor-not-allowed")} disabled={true || isLoading || mode === 'findingLinks'} onClick={() => console.log('Add Keywords clicked')}>
+        <button className={cn("flex items-center gap-1 px-2.5 py-1 rounded-md hover:bg-gray-100 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 opacity-50 cursor-not-allowed")} disabled={true || isLoading || mode === 'findingLinks'} onClick={() => console.log('Add Keywords clicked')}>
           <span>Add Keywords</span>
           <ChevronDown className="h-3 w-3 ml-0.5 text-gray-500" />
         </button>
@@ -211,9 +212,8 @@ const SelectionTooltip: React.FC<SelectionTooltipProps> = ({
           disabled={isLoading || mode === 'findingLinks'}
           onClick={handleFindLinksClick} // Trigger link finding
         >
-          <LinkIcon className="h-4 w-4 text-blue-500" /> {/* Changed Icon */}
+          <LinkIcon className="h-4 w-4 text-blue-500" />
           <span>Add Links</span>
-           {/* Removed ChevronDown as it's now an action */}
         </button>
       </div>
 

@@ -30,7 +30,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ onSelectionLinks }) => 
   const [isFindingLinks, setIsFindingLinks] = useState(false); // Specific state for finding links
   const editorRef = useRef<HTMLDivElement>(null);
   const lastOperationRef = useRef<LastOperation | null>(null);
-  // Removed foundLinks state here, as tooltip manages display directly
+  const blockTooltipRef = useRef<boolean>(false);
 
   const editor = useEditor({
     extensions: [
@@ -54,19 +54,31 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ onSelectionLinks }) => 
 
   // --- Tooltip Positioning & Outside Click (Keep as before) ---
   useEffect(() => {
-      // ... Positioning logic from previous answer remains the same ...
        const editorElement = editorRef.current?.querySelector('.ProseMirror');
        if (!editorElement || !editor) return;
 
-       const calculatePosition = () => { /* ... same as before ... */
+       const calculatePosition = () => {
            if (!editor.isActive || editor.state.selection.empty) {
              const tooltipElement = document.querySelector('.selection-tooltip-container');
              const isPointerOverTooltip = tooltipElement?.matches(':hover');
              if (!isPointerOverTooltip) { setSelectionPosition(null); }
              return;
            }
+           
+           // Skip if tooltip is blocked
+           if (blockTooltipRef.current) return;
+           
            const { from, to } = editor.state.selection;
-           if (lastOperationRef.current) { /* ... check last op ... */ return; }
+           
+           // Check for last operation to avoid immediate reappearance after operations
+           if (lastOperationRef.current) {
+               const { from: lastFrom, to: lastTo, timestamp } = lastOperationRef.current;
+               // Only block the tooltip if it's at the exact same position as last operation
+               // and it's a fresh operation (less than 500ms old)
+               if (from === lastFrom && to === lastTo && Date.now() - timestamp < 500) {
+                   return;
+               }
+           }
 
            const view = editor.view;
            const startCoords = view.coordsAtPos(from);
@@ -79,12 +91,24 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ onSelectionLinks }) => 
            setSelectionPosition({ x: positionX, y: positionY, right: positionRight });
         };
 
-       const handleMouseUp = (event: MouseEvent) => { /* ... same as before ... */
+       const handleMouseUp = (event: MouseEvent) => {
            const tooltipElement = document.querySelector('.selection-tooltip-container');
            if (tooltipElement && tooltipElement.contains(event.target as Node)) { return; }
+           
+           // If tooltip is currently blocked, unblock it on fresh mouse selection
+           if (blockTooltipRef.current) {
+               blockTooltipRef.current = false;
+           }
+           
            setTimeout(calculatePosition, 50);
        };
-       const handleSelectionUpdate = () => { /* ... same as before ... */ setTimeout(calculatePosition, 100); };
+       
+       const handleSelectionUpdate = () => {
+           // Always allow recalculation on selection update
+           // But don't immediately reset blockTooltip since this might be triggered
+           // as part of an operation completion
+           setTimeout(calculatePosition, 100);
+       };
 
        editorElement.addEventListener('mouseup', handleMouseUp);
        editor.on('selectionUpdate', handleSelectionUpdate);
@@ -123,6 +147,10 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ onSelectionLinks }) => 
 
      const { from, to } = editor.state.selection;
      lastOperationRef.current = { from, to, timestamp: Date.now() };
+     
+     // Temporarily block the tooltip from reappearing right away
+     blockTooltipRef.current = true;
+     
      setSelectionPosition(null);
      setIsProcessing(true); // Use general processing state
      const toastId = toast.loading(loadingMessage);
@@ -134,7 +162,12 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ onSelectionLinks }) => 
      } catch (error) { /* ... handle error ... */ }
      finally {
         setIsProcessing(false);
-        setTimeout(() => { /* ... clear last op ref ... */ }, 600);
+        // Clear last operation reference after a delay
+        setTimeout(() => { 
+            lastOperationRef.current = null;
+            // Also allow the tooltip to reappear
+            blockTooltipRef.current = false;
+        }, 600);
      }
   };
 
@@ -192,6 +225,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ onSelectionLinks }) => 
         return null; // Return null on error
     } finally {
         setIsFindingLinks(false); // Clear specific loading state
+        // Don't block tooltip here as we want to show the link results
     }
   };
 
@@ -210,6 +244,8 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ onSelectionLinks }) => 
 
     // Record operation to prevent immediate tooltip reappearance
     lastOperationRef.current = { from, to, timestamp: Date.now() };
+    // Block tooltip from reappearing right away
+    blockTooltipRef.current = true;
 
     editor.chain()
       .focus() // Ensure editor has focus
@@ -220,6 +256,12 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ onSelectionLinks }) => 
 
     // Hide the tooltip since an action was completed
     setSelectionPosition(null);
+    
+    // Unblock tooltip after a delay
+    setTimeout(() => {
+        blockTooltipRef.current = false;
+        lastOperationRef.current = null;
+    }, 600);
   };
 
 
