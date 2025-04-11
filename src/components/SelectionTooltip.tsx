@@ -5,8 +5,8 @@ import {
   FileText,
   Link as LinkIcon,
   ChevronDown,
-  ArrowDownWide,
-  ArrowUpWide,
+  ArrowDown,
+  ArrowUp,
   ListIcon,
   Table2,
   Pencil
@@ -68,7 +68,7 @@ const SelectionTooltip: React.FC<SelectionTooltipProps> = ({
   };
   
   return (
-    <div className="absolute z-50" style={{
+    <div className="absolute z-50 selection-tooltip-container" style={{
       left: `${position.x}px`,
       top: `${position.y - 50}px`, 
       transform: 'translateX(-50%)'
@@ -122,7 +122,7 @@ const SelectionTooltip: React.FC<SelectionTooltipProps> = ({
               className="flex items-center gap-2 px-3 py-2 rounded hover:bg-gray-100 text-sm cursor-pointer"
               onClick={handleMakeLonger}
             >
-              <ArrowDownWide className="h-4 w-4 text-gray-500" />
+              <ArrowDown className="h-4 w-4 text-gray-500" />
               <span>Make Longer</span>
             </DropdownMenuItem>
             
@@ -130,7 +130,7 @@ const SelectionTooltip: React.FC<SelectionTooltipProps> = ({
               className="flex items-center gap-2 px-3 py-2 rounded hover:bg-gray-100 text-sm cursor-pointer"
               onClick={handleMakeShorter}
             >
-              <ArrowUpWide className="h-4 w-4 text-gray-500" />
+              <ArrowUp className="h-4 w-4 text-gray-500" />
               <span>Make Shorter</span>
             </DropdownMenuItem>
             

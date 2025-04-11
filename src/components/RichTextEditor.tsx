@@ -1,12 +1,9 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react'; // Added useRef
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
 import TextAlign from '@tiptap/extension-text-align';
 import Link from '@tiptap/extension-link';
-// Ensure TextStyle is imported if using it for shimmer, otherwise remove shimmer effect
-// import TextStyle from '@tiptap/extension-text-style'; // Might be needed
-// import { Mark } from '@tiptap/pm/model'; // Might be needed for class attribute
 
 import EditorToolbar from './EditorToolbar';
 import SelectionTooltip from './SelectionTooltip';
@@ -21,8 +18,8 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ onSelectionLinks }) => 
   const [selectionPosition, setSelectionPosition] = useState<{ x: number; y: number } | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingRange, setProcessingRange] = useState<{ from: number; to: number } | null>(null);
-  // Removed mouseUpHandled as it wasn't used effectively
-  const editorRef = useRef<HTMLDivElement>(null); // Ref for the editor container
+  const editorRef = useRef<HTMLDivElement>(null);
+  const lastOperationRef = useRef<{from: number; to: number; timestamp: number} | null>(null);
 
   const editor = useEditor({
     extensions: [
@@ -37,57 +34,9 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ onSelectionLinks }) => 
       Link.configure({
         openOnClick: false,
       }),
-      // TextStyle, // Add TextStyle if you implement the shimmer effect
     ],
     content: '<p>This is a new article. You can start editing it right away.</p><p>Use the sidebar to add tags, set a focus keyword, and customize your article\'s metadata.</p>',
-    // onSelectionUpdate removed as mouseup handles it
   });
-
-  // --- Shimmer Effect ---
-  // Note: Applying classes via marks like this often requires the TextStyle extension
-  // and potentially custom mark rendering. This might be complex. A simpler approach
-  // might be to apply a class to the editor container while processing.
-  // Commenting out the effect for now as it needs TextStyle setup.
-  /*
-  useEffect(() => {
-    if (!editor?.isActive || !editor.schema.marks.textStyle) {
-        console.warn("TextStyle extension not available for shimmer effect.");
-        return;
-    };
-    if (!processingRange || !isProcessing) return;
-
-    const { from, to } = processingRange;
-    const shimmerClass = 'shimmer-effect'; // Ensure this CSS class is defined
-
-    console.log(`Applying shimmer from ${from} to ${to}`);
-    const transaction = editor.state.tr;
-    // Check if textStyle mark exists before creating
-    if (editor.schema.marks.textStyle) {
-        const mark = editor.schema.marks.textStyle.create({ class: shimmerClass });
-        transaction.addMark(from, to, mark);
-        editor.view.dispatch(transaction);
-    }
-
-
-    return () => {
-      // Ensure editor and mark type exist before removing
-      if (editor?.isActive && editor.schema.marks.textStyle && processingRange) {
-        console.log(`Removing shimmer from ${processingRange.from} to ${processingRange.to}`);
-        const removeTransaction = editor.state.tr;
-        // Ensure the mark type exists before trying to remove it
-        const markType = editor.schema.marks.textStyle;
-        if(markType) {
-             removeTransaction.removeMark(processingRange.from, processingRange.to, markType);
-             // It might be safer to remove *any* mark with the class if the specific instance is tricky
-             // removeTransaction.removeMark(processingRange.from, processingRange.to, null); // Removes all marks - maybe too broad
-             // Filter marks to remove only the shimmer one if needed
-        }
-        editor.view.dispatch(removeTransaction);
-      }
-    };
-  }, [editor, processingRange, isProcessing]);
-  */
-
 
   // Show selection tooltip after mouse up
   useEffect(() => {
@@ -95,48 +44,48 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ onSelectionLinks }) => 
     if (!editorElement || !editor) return;
 
     const handleMouseUp = (event: MouseEvent) => {
-        // Don't show tooltip if the mouseup is on the tooltip itself
-        const tooltipElement = document.querySelector('.selection-tooltip-container');
-        if (tooltipElement && tooltipElement.contains(event.target as Node)) {
-            return;
-        }
+      // Don't show tooltip if the mouseup is on the tooltip itself
+      const tooltipElement = document.querySelector('.selection-tooltip-container');
+      if (tooltipElement && tooltipElement.contains(event.target as Node)) {
+        return;
+      }
+      
+      // Prevent tooltip from immediately reappearing after an operation
+      if (lastOperationRef.current) {
+        const { from, to, timestamp } = lastOperationRef.current;
+        const now = Date.now();
         
-        // Prevent tooltip from immediately reappearing after an operation
-        if (lastOperationRef.current) {
-          const { from: lastFrom, to: lastTo, timestamp } = lastOperationRef.current;
-          const now = Date.now();
-          
-          // If we just performed an operation on this same selection within the last second
-          if (from === lastFrom && to === lastTo && now - timestamp < 1000) {
-            return;
+        // If we just performed an operation on this same selection within the last second
+        const selection = editor.state.selection;
+        if (selection && selection.from === from && selection.to === to && now - timestamp < 1000) {
+          return;
+        }
+      }
+
+      // Use requestAnimationFrame to ensure selection state is updated
+      requestAnimationFrame(() => {
+        if (!editor.isActive) return; // Check if editor is still active
+
+        const { from, to, empty } = editor.state.selection;
+
+        if (empty) {
+          // Only hide if the mouse didn't land on the tooltip
+          if (!tooltipElement || !tooltipElement.contains(event.target as Node)) {
+            setSelectionPosition(null);
           }
+          return;
         }
 
-        // Use requestAnimationFrame to ensure selection state is updated
-        requestAnimationFrame(() => {
-            if (!editor.isActive) return; // Check if editor is still active
+        // Calculate position based on the start of the selection
+        const startPos = editor.view.coordsAtPos(from);
+        const editorRect = editorElement.getBoundingClientRect();
 
-            const { from, to, empty } = editor.state.selection;
-
-            if (empty) {
-                // Only hide if the mouse didn't land on the tooltip
-                 if (!tooltipElement || !tooltipElement.contains(event.target as Node)) {
-                     setSelectionPosition(null);
-                 }
-                return;
-            }
-
-            // Calculate position based on the start of the selection
-            const startPos = editor.view.coordsAtPos(from);
-            const editorRect = editorElement.getBoundingClientRect();
-
-            setSelectionPosition({
-                x: startPos.left - editorRect.left,
-                y: startPos.top - editorRect.top,
-            });
+        setSelectionPosition({
+          x: startPos.left - editorRect.left,
+          y: startPos.top - editorRect.top,
         });
+      });
     };
-
 
     editorElement.addEventListener('mouseup', handleMouseUp);
 
@@ -145,18 +94,16 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ onSelectionLinks }) => 
     };
   }, [editor]); // Re-run if editor instance changes
 
-
   // Hide tooltip when clicking outside editor AND outside tooltip
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const editorElement = editorRef.current?.querySelector('.ProseMirror');
-      const tooltipElement = document.querySelector('.selection-tooltip-container'); // Use the class added
+      const tooltipElement = document.querySelector('.selection-tooltip-container');
 
       // Check if the click target is outside both the editor and the tooltip
-      if ( editorElement && !editorElement.contains(event.target as Node) &&
-           (!tooltipElement || !tooltipElement.contains(event.target as Node)) // Check tooltip only if it exists
-         ) {
-           setSelectionPosition(null);
+      if (editorElement && !editorElement.contains(event.target as Node) &&
+          (!tooltipElement || !tooltipElement.contains(event.target as Node))) {
+        setSelectionPosition(null);
       }
     };
 
@@ -165,12 +112,12 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ onSelectionLinks }) => 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, []); // No dependencies needed here
+  }, []);
 
   // Mock API call - unchanged
   const mockFindLinks = async (text: string) => {
     setIsProcessing(true);
-    setProcessingRange(editor ? { from: editor.state.selection.from, to: editor.state.selection.to } : null); // Capture range
+    setProcessingRange(editor ? { from: editor.state.selection.from, to: editor.state.selection.to } : null);
     try {
       await new Promise(resolve => setTimeout(resolve, 1500));
       return [ /* ... links ... */ ];
@@ -186,8 +133,8 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ onSelectionLinks }) => 
     return editor.state.doc.textBetween(from, to, ' ');
   }, [editor]);
 
-  const handleRewrite = async () => {
-    console.log('handleRewrite called'); // This should now log
+  const handleRewrite = async (e: React.MouseEvent<HTMLButtonElement>) => {
+    console.log('handleRewrite called');
     if (!editor) return;
 
     const selectedText = getSelectedText();
@@ -206,16 +153,16 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ onSelectionLinks }) => 
       // Hide tooltip while processing
       setSelectionPosition(null);
       setIsProcessing(true);
-      setProcessingRange({ from, to }); // Set range *before* API call
+      setProcessingRange({ from, to });
 
       toast.loading('Rewriting text...');
       const rewrittenText = await processText(selectedText, 'rewrite');
       console.log('Received rewritten text:', rewrittenText);
 
-       // Check if editor is still active/mounted before updating
-       if (editor.isActive) {
-          editor.chain().focus().deleteRange({ from, to }).insertContent(rewrittenText).run();
-       }
+      // Check if editor is still active/mounted before updating
+      if (editor.isActive) {
+        editor.chain().focus().deleteRange({ from, to }).insertContent(rewrittenText).run();
+      }
       setSelectionPosition(null); // Hide tooltip after action
       toast.dismiss(); // Dismiss loading toast
       toast.success('Text rewritten successfully');
@@ -272,11 +219,11 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ onSelectionLinks }) => 
   };
 
   const handleFindLinks = async () => {
-     console.log('handleFindLinks called');
+    console.log('handleFindLinks called');
     if (!editor) return;
 
     const selectedText = getSelectedText();
-     console.log('Selected text for links:', selectedText);
+    console.log('Selected text for links:', selectedText);
     if (!selectedText || selectedText.trim().length < 10) {
       toast.error('Please select enough text to find relevant links');
       return;
@@ -284,11 +231,11 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ onSelectionLinks }) => 
 
     // Capture range before async operation
     const { from, to } = editor.state.selection;
-    setProcessingRange({ from, to }); // Use processingRange for shimmer effect if needed
+    setProcessingRange({ from, to });
 
     try {
       // No need for toast.loading here as mockFindLinks sets isProcessing
-      const links = await mockFindLinks(selectedText); // This already sets isProcessing
+      const links = await mockFindLinks(selectedText);
       onSelectionLinks(links);
       toast.success('Found related links');
     } catch (error) {
@@ -302,19 +249,18 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ onSelectionLinks }) => 
   };
 
   return (
-    // Add ref to the outer container
     <div ref={editorRef} className="flex-1 flex flex-col h-full bg-white relative">
       <div className="px-4 py-3 border-b">
         <EditorToolbar editor={editor} />
       </div>
-      <div className="flex-1 overflow-auto relative"> {/* This inner div helps contain the absolutely positioned tooltip */}
-        <EditorContent editor={editor} className="h-full p-4" /> {/* Added padding for aesthetics */}
+      <div className="flex-1 overflow-auto relative">
+        <EditorContent editor={editor} className="h-full p-4" />
         <SelectionTooltip
           position={selectionPosition}
-          onRewrite={handleRewrite} // <-- FIX: Pass the actual handler
+          onRewrite={handleRewrite}
           onSimplify={handleSimplify}
           onFindLinks={handleFindLinks}
-          isLoading={isProcessing} // <-- FIX: Use the state variable
+          isLoading={isProcessing}
         />
       </div>
     </div>
