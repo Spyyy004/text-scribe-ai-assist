@@ -100,6 +100,17 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ onSelectionLinks }) => 
         if (tooltipElement && tooltipElement.contains(event.target as Node)) {
             return;
         }
+        
+        // Prevent tooltip from immediately reappearing after an operation
+        if (lastOperationRef.current) {
+          const { from: lastFrom, to: lastTo, timestamp } = lastOperationRef.current;
+          const now = Date.now();
+          
+          // If we just performed an operation on this same selection within the last second
+          if (from === lastFrom && to === lastTo && now - timestamp < 1000) {
+            return;
+          }
+        }
 
         // Use requestAnimationFrame to ensure selection state is updated
         requestAnimationFrame(() => {
@@ -189,6 +200,11 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ onSelectionLinks }) => 
     const { from, to } = editor.state.selection;
 
     try {
+      // Record this operation to prevent immediate tooltip reappearance
+      lastOperationRef.current = { from, to, timestamp: Date.now() };
+      
+      // Hide tooltip while processing
+      setSelectionPosition(null);
       setIsProcessing(true);
       setProcessingRange({ from, to }); // Set range *before* API call
 
@@ -227,6 +243,11 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ onSelectionLinks }) => 
     const { from, to } = editor.state.selection;
 
     try {
+      // Record this operation to prevent immediate tooltip reappearance
+      lastOperationRef.current = { from, to, timestamp: Date.now() };
+      
+      // Hide tooltip while processing
+      setSelectionPosition(null);
       setIsProcessing(true);
       setProcessingRange({ from, to });
 
@@ -269,7 +290,6 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ onSelectionLinks }) => 
       // No need for toast.loading here as mockFindLinks sets isProcessing
       const links = await mockFindLinks(selectedText); // This already sets isProcessing
       onSelectionLinks(links);
-      setSelectionPosition(null);
       toast.success('Found related links');
     } catch (error) {
       console.error("Error finding links:", error);

@@ -22,6 +22,26 @@ const SelectionTooltip: React.FC<SelectionTooltipProps> = ({
   isLoading
 }) => {
   if (!position) return null;
+  
+  const handleRewriteClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onRewrite();
+    // Don't close dropdown here to prevent re-opening
+  };
+  
+  const handleSimplifyClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onSimplify();
+    // Don't close dropdown here to prevent re-opening
+  };
+  
+  const handleFindLinksClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onFindLinks();
+  };
 
   return (
     <div
