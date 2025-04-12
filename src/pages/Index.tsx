@@ -18,7 +18,7 @@ const Index = () => {
             <EditorHeader title="New Article" />
             <div className="flex-1 flex overflow-hidden">
               <RichTextEditor onSelectionLinks={setRelatedLinks} />
-              <EditorSidebar />
+              <EditorSidebar relatedLinks={relatedLinks} />
             </div>
           </div>
         </SidebarInset>

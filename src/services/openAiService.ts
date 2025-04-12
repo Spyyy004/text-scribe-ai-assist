@@ -72,8 +72,3 @@ export const processText = async (text: string, operation: 'rewrite' | 'simplify
     throw error;
   }
 };
-
-// Export the service as a single object to match the import in RichTextEditor
-export const openAiService = {
-  processText
-};
