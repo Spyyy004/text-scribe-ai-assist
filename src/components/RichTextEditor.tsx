@@ -6,28 +6,34 @@ import TextAlign from '@tiptap/extension-text-align';
 import Link from '@tiptap/extension-link';
 import EditorToolbar from './EditorToolbar';
 import SelectionTooltip from './SelectionTooltip';
+import TextConfirmationBox from './TextConfirmationBox';
 import { toast } from 'sonner';
-import { processText, TextOperation } from '@/services/openAiService'; // Import type
+import { processText, TextOperation } from '@/services/openAiService';
 
-// Define structure for link data used internally and passed around
 interface FoundLink {
   title: string;
   url: string;
 }
 
 interface RichTextEditorProps {
-  // If links need to be displayed elsewhere (like a sidebar), keep this.
-  // Otherwise, it might become redundant if only used for the tooltip.
   onSelectionLinks?: (links: FoundLink[] | null) => void;
 }
 
 interface TooltipPosition { x: number; y: number; right?: number; }
 interface LastOperation { from: number; to: number; timestamp: number; }
+interface PendingChange {
+  originalText: string;
+  processedText: string;
+  from: number;
+  to: number;
+}
 
 const RichTextEditor: React.FC<RichTextEditorProps> = ({ onSelectionLinks }) => {
   const [selectionPosition, setSelectionPosition] = useState<TooltipPosition | null>(null);
-  const [isProcessing, setIsProcessing] = useState(false); // General processing
-  const [isFindingLinks, setIsFindingLinks] = useState(false); // Specific state for finding links
+  const [confirmationPosition, setConfirmationPosition] = useState<TooltipPosition | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [isFindingLinks, setIsFindingLinks] = useState(false);
+  const [pendingChange, setPendingChange] = useState<PendingChange | null>(null);
   const editorRef = useRef<HTMLDivElement>(null);
   const lastOperationRef = useRef<LastOperation | null>(null);
   const blockTooltipRef = useRef<boolean>(false);
@@ -38,21 +44,19 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ onSelectionLinks }) => 
       Placeholder.configure({ placeholder: 'Start writing your article...' }),
       TextAlign.configure({ types: ['paragraph', 'heading'], alignments: ['left', 'center', 'right'] }),
       Link.configure({
-        openOnClick: false, // Keep false to prevent immediate navigation
+        openOnClick: false,
         autolink: true,
         linkOnPaste: true,
-        // Add title attribute if you want to store title from fetched links
         HTMLAttributes: {
           title: null,
-          target: '_blank', // Open links in new tab
-          rel: 'noopener noreferrer nofollow', // Security/SEO attributes
+          target: '_blank',
+          rel: 'noopener noreferrer nofollow',
         },
       }),
     ],
     content: '<p>Example: Select text like Tiptap editor and click Add Links.</p>',
   });
 
-  // --- Tooltip Positioning & Outside Click (Keep as before) ---
   useEffect(() => {
        const editorElement = editorRef.current?.querySelector('.ProseMirror');
        if (!editorElement || !editor) return;
@@ -119,31 +123,35 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ onSelectionLinks }) => 
   }, [editor]);
 
   useEffect(() => {
-      // ... handleClickOutside logic remains the same ...
-        const handleClickOutside = (event: MouseEvent) => {
-            const editorElement = editorRef.current;
-            const tooltipElement = document.querySelector('.selection-tooltip-container');
-            const target = event.target as Node;
-            if (editorElement && !editorElement.contains(target) && (!tooltipElement || !tooltipElement.contains(target))) {
-               setSelectionPosition(null);
-            }
-        };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
+      const handleClickOutside = (event: MouseEvent) => {
+          const editorElement = editorRef.current;
+          const tooltipElement = document.querySelector('.selection-tooltip-container');
+          const confirmationElement = document.querySelector('.text-confirmation-box');
+          const target = event.target as Node;
+          
+          if (editorElement && !editorElement.contains(target) && 
+              (!tooltipElement || !tooltipElement.contains(target)) &&
+              (!confirmationElement || !confirmationElement.contains(target))) {
+             setSelectionPosition(null);
+             // Don't auto-hide confirmation box when clicking outside
+          }
+      };
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-
-  // --- Text Processing Helper (Unchanged from previous) ---
-  const processAndReplaceText = async (
-      command: TextOperation, // Use imported type
+  const processAndShowConfirmation = async (
+      command: TextOperation,
       loadingMessage: string,
-      successMessage: string,
       errorMessage: string
   ) => {
-     if (!editor || isProcessing || isFindingLinks) return; // Also check isFindingLinks
+     if (!editor || isProcessing || isFindingLinks) return;
      const selectedText = getSelectedText();
      const minLength = (command === 'simplify' || command === 'makeShorter') ? 10 : 5;
-     if (!selectedText || selectedText.trim().length < minLength) { /* ... toast error ... */ return; }
+     if (!selectedText || selectedText.trim().length < minLength) {
+       toast.error('Please select a longer text to process.');
+       return;
+     }
 
      const { from, to } = editor.state.selection;
      lastOperationRef.current = { from, to, timestamp: Date.now() };
@@ -151,50 +159,105 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ onSelectionLinks }) => 
      // Temporarily block the tooltip from reappearing right away
      blockTooltipRef.current = true;
      
+     // Save the position for confirmation box before hiding tooltip
+     const currentPos = { ...selectionPosition! };
      setSelectionPosition(null);
-     setIsProcessing(true); // Use general processing state
+     setIsProcessing(true);
      const toastId = toast.loading(loadingMessage);
 
      try {
         const resultText = await processText(selectedText, command);
-        if (editor.isActive) { 
-          console.log(`Replacing text from ${from} to ${to} with: "${resultText}"`); // Add log
-            editor.chain()
-                  .focus()                    // Ensure editor has focus
-                  .deleteRange({ from, to })  // Delete the original selected range using captured from/to
-                  .insertContent(resultText)  // Insert the text returned from the API
-                  .run();        
-        }
-        toast.success(successMessage, { id: toastId });
-     } catch (error) { /* ... handle error ... */ }
-     finally {
+        toast.dismiss(toastId);
+        
+        // Instead of directly replacing, show confirmation box
+        setPendingChange({
+          originalText: selectedText,
+          processedText: resultText,
+          from,
+          to
+        });
+        setConfirmationPosition(currentPos);
+     } catch (error) {
+        console.error('Error processing text:', error);
+        toast.error(errorMessage, { id: toastId });
+        setPendingChange(null);
+        setConfirmationPosition(null);
+     } finally {
         setIsProcessing(false);
-        // Clear last operation reference after a delay
-        setTimeout(() => { 
-            lastOperationRef.current = null;
-            // Also allow the tooltip to reappear
+        // Unblock tooltip after a delay but don't clear last operation yet
+        setTimeout(() => {
             blockTooltipRef.current = false;
         }, 600);
      }
   };
 
-  // --- Action Handlers (Rewrite, Simplify, etc. - Unchanged) ---
-  const getSelectedText = useCallback(() => { /* ... same ... */
+  const handleAcceptChange = () => {
+    if (!editor || !pendingChange) return;
+    
+    const { processedText, from, to } = pendingChange;
+    
+    // Apply the change
+    editor.chain()
+      .focus()
+      .deleteRange({ from, to })
+      .insertContent(processedText)
+      .run();
+      
+    // Clean up
+    setPendingChange(null);
+    setConfirmationPosition(null);
+    
+    // Clear last operation reference after a delay
+    setTimeout(() => {
+      lastOperationRef.current = null;
+    }, 600);
+    
+    toast.success('Changes applied successfully');
+  };
+  
+  const handleDiscardChange = () => {
+    // Just clean up without applying changes
+    setPendingChange(null);
+    setConfirmationPosition(null);
+    
+    // Clear last operation reference after a delay
+    setTimeout(() => {
+      lastOperationRef.current = null;
+    }, 600);
+    
+    toast.info('Changes discarded');
+  };
+
+  const getSelectedText = useCallback(() => {
       if (!editor) return '';
       const { from, to } = editor.state.selection;
       return editor.state.doc.textBetween(from, to, ' ');
   }, [editor]);
-  const handleRewrite = async () => { await processAndReplaceText('rewrite', 'Rewriting...', 'Rewritten', 'Rewrite failed'); };
-  const handleSimplify = async () => { await processAndReplaceText('simplify', 'Simplifying...', 'Simplified', 'Simplify failed'); };
-  const handleMakeLonger = async () => { await processAndReplaceText('makeLonger', 'Expanding...', 'Expanded', 'Expand failed'); };
-  const handleMakeShorter = async () => { await processAndReplaceText('makeShorter', 'Shortening...', 'Shortened', 'Shorten failed'); };
-  const handleMakeList = async () => { await processAndReplaceText('makeList', 'Creating list...', 'List created', 'List creation failed'); };
-  const handleMakeTable = async () => { await processAndReplaceText('makeTable', 'Creating table...', 'Table created', 'Table creation failed'); };
+  
+  const handleRewrite = async () => {
+    await processAndShowConfirmation('rewrite', 'Rewriting...', 'Rewrite failed');
+  };
+  
+  const handleSimplify = async () => {
+    await processAndShowConfirmation('simplify', 'Simplifying...', 'Simplify failed');
+  };
+  
+  const handleMakeLonger = async () => {
+    await processAndShowConfirmation('makeLonger', 'Expanding...', 'Expand failed');
+  };
+  
+  const handleMakeShorter = async () => {
+    await processAndShowConfirmation('makeShorter', 'Shortening...', 'Shorten failed');
+  };
+  
+  const handleMakeList = async () => {
+    await processAndShowConfirmation('makeList', 'Creating list...', 'List creation failed');
+  };
+  
+  const handleMakeTable = async () => {
+    await processAndShowConfirmation('makeTable', 'Creating table...', 'Table creation failed');
+  };
 
-
-  // --- Link Handling ---
-
-  // Function to fetch links (passed to Tooltip's onFindLinks prop)
   const fetchAndReturnLinks = async (): Promise<FoundLink[] | null> => {
     if (!editor || isFindingLinks || isProcessing) return null;
 
@@ -236,7 +299,6 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ onSelectionLinks }) => 
     }
   };
 
-  // Function to apply a link (passed to Tooltip's onApplyLink prop)
   const handleApplyLink = (url: string, title?: string) => {
     if (!editor || !editor.isActive) return;
 
@@ -258,7 +320,6 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ onSelectionLinks }) => 
       .focus() // Ensure editor has focus
       .extendMarkRange('link') // Extend selection to cover any existing link marks
       .setLink({ href: url, title: title || null }) // Set the link with optional title
-      // .setTextSelection({from: to, to: to}) // Optional: Collapse selection to the end after applying
       .run();
 
     // Hide the tooltip since an action was completed
@@ -271,35 +332,40 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ onSelectionLinks }) => 
     }, 600);
   };
 
-
-  // --- Render ---
   return (
     <div ref={editorRef} className="flex-1 flex flex-col h-full bg-white relative">
-      {/* Toolbar */}
       <div className="px-4 py-3 border-b sticky top-0 bg-white z-10">
          {editor && <EditorToolbar editor={editor} />}
       </div>
 
-      {/* Editor Content Area */}
       <div className="flex-1 overflow-auto relative px-4 md:px-6 lg:px-8 py-4">
         <EditorContent editor={editor} className="prose prose-sm sm:prose lg:prose-lg xl:prose-xl max-w-none focus:outline-none h-full" />
-         {editor && selectionPosition && ( // Render tooltip only if editor exists and position is set
+         
+         {editor && selectionPosition && (
             <SelectionTooltip
                 position={selectionPosition}
-                // AI Actions
                 onRewrite={handleRewrite}
                 onSimplify={handleSimplify}
                 onMakeLonger={handleMakeLonger}
                 onMakeShorter={handleMakeShorter}
                 onMakeList={handleMakeList}
                 onMakeTable={handleMakeTable}
-                // Link Actions
-                onFindLinks={fetchAndReturnLinks} // Pass the fetching function
-                onApplyLink={handleApplyLink}   // Pass the applying function
-                // Loading States
-                isLoading={isProcessing} // General loading for AI ops
-                // Note: isFindingLinks is handled internally by the tooltip based on the promise from onFindLinks
+                onFindLinks={fetchAndReturnLinks}
+                onApplyLink={handleApplyLink}
+                isLoading={isProcessing}
             />
+         )}
+         
+         {pendingChange && confirmationPosition && (
+           <div className="text-confirmation-box">
+             <TextConfirmationBox
+               originalText={pendingChange.originalText}
+               processedText={pendingChange.processedText}
+               position={confirmationPosition}
+               onAccept={handleAcceptChange}
+               onDiscard={handleDiscardChange}
+             />
+           </div>
          )}
       </div>
     </div>
