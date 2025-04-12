@@ -217,23 +217,7 @@ const SelectionTooltip: React.FC<SelectionTooltipProps> = ({
         </button>
       </div>
 
-      {/* AI Command Input - Only in default mode */}
-      <div className="mt-2 w-full max-w-xs">
-        <div className="relative flex items-center bg-white rounded-lg shadow-md border border-purple-300 focus-within:ring-2 focus-within:ring-purple-400 focus-within:ring-offset-1">
-          <Sparkles className="absolute left-2.5 h-4 w-4 text-purple-500 pointer-events-none" />
-          <input
-            type="text"
-            placeholder="Ask AI to edit or generate"
-            className="flex-1 pl-9 pr-16 py-2 text-sm rounded-lg border-0 focus:outline-none focus:ring-0 bg-transparent"
-            disabled={isLoading || mode === 'findingLinks'}
-            onClick={(e) => e.stopPropagation()}
-            onMouseDown={(e) => e.stopPropagation()}
-          />
-          <div className="absolute right-2 top-1/2 transform -translate-y-1/2 text-xs bg-gray-100 px-1.5 py-0.5 rounded text-gray-500 pointer-events-none">
-            ⌘+/
-          </div>
-        </div>
-      </div>
+      
     </>
   );
 

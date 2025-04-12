@@ -1,9 +1,9 @@
-
 import React from 'react';
 import { Check, Trash2 } from 'lucide-react';
+import { cn } from '@/lib/utils'; // Using cn for cleaner classes
 
 interface TextConfirmationBoxProps {
-  originalText: string;
+  // originalText prop is not used in the rendering, removed unless needed elsewhere
   processedText: string;
   onAccept: () => void;
   onDiscard: () => void;
@@ -18,44 +18,66 @@ const TextConfirmationBox: React.FC<TextConfirmationBoxProps> = ({
 }) => {
   if (!position) return null;
 
-  // Styling based on position
+  // Styling based on position (no changes needed here)
   const isNearRightEdge = position.right !== undefined && position.right < 300;
-  
   const positionStyle: React.CSSProperties = {
     position: 'absolute',
     left: `${position.x}px`,
     top: `${position.y}px`,
     transform: isNearRightEdge ? 'translateX(-100%)' : 'translateX(-50%)',
     zIndex: 50,
-    maxWidth: '90vw',
-    minWidth: '280px',
+    maxWidth: '90vw', // Keep max width constraint
+    minWidth: '250px', // Adjust min width if needed
     width: 'auto',
   };
 
   return (
-    <div 
-      style={positionStyle} 
-      className="bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden"
+    <div
+      style={positionStyle}
+      // Container: Increased rounding, adjusted shadow and border
+      className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden"
       onClick={(e) => e.stopPropagation()}
       onMouseDown={(e) => e.stopPropagation()}
     >
-      <div className="p-4">
-        <div className="text-base text-gray-800 mb-2 overflow-y-auto max-h-40">
+      {/* Layout: Flex row, items centered vertically, space between text and buttons */}
+      <div className="flex items-center justify-between gap-4 p-3"> {/* Adjusted padding */}
+
+        {/* Processed Text: Takes available space, truncates if needed */}
+        <div className="flex-grow text-sm text-gray-800 mr-2 truncate"> {/* Adjusted text size/color */}
           {processedText}
         </div>
-        <div className="flex justify-end gap-2 mt-4">
-          <button 
-            className="flex items-center text-indigo-700 border border-indigo-700 rounded-md px-4 py-2 hover:bg-indigo-50"
+
+        {/* Button Group: Doesn't shrink, fixed gap */}
+        <div className="flex items-center flex-shrink-0 gap-2">
+
+          {/* Discard Button: Outlined style, purple, adjusted padding/rounding */}
+          <button
+            className={cn(
+              "flex items-center justify-center whitespace-nowrap", // Prevent wrapping
+              "text-indigo-600 border border-indigo-500 rounded-lg", // Target colors, more rounding
+              "px-3 py-1.5", // Adjusted padding
+              "text-sm font-medium", // Font size/weight
+              "hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-1 transition-colors duration-150" // Interaction states
+            )}
             onClick={onDiscard}
           >
-            <Trash2 className="h-5 w-5 mr-2" />
+            {/* Filled Trash Icon */}
+            <Trash2 className="h-4 w-4 mr-1.5 text-indigo-600" fill="currentColor"/>
             Discard
           </button>
-          <button 
-            className="flex items-center bg-indigo-600 text-white rounded-md px-4 py-2 hover:bg-indigo-700"
+
+          {/* Accept Button: Solid style, purple, adjusted padding/rounding */}
+          <button
+             className={cn(
+              "flex items-center justify-center whitespace-nowrap", // Prevent wrapping
+              "bg-indigo-600 text-white rounded-lg", // Target colors, more rounding
+              "px-3 py-1.5", // Adjusted padding
+              "text-sm font-medium", // Font size/weight
+              "hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-1 transition-colors duration-150" // Interaction states
+             )}
             onClick={onAccept}
           >
-            <Check className="h-5 w-5 mr-2" />
+            <Check className="h-4 w-4 mr-1.5" /> {/* White check */}
             Accept
           </button>
         </div>
