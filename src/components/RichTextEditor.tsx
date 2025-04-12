@@ -157,7 +157,14 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ onSelectionLinks }) => 
 
      try {
         const resultText = await processText(selectedText, command);
-        if (editor.isActive) { /* ... replace text ... */ }
+        if (editor.isActive) { 
+          console.log(`Replacing text from ${from} to ${to} with: "${resultText}"`); // Add log
+            editor.chain()
+                  .focus()                    // Ensure editor has focus
+                  .deleteRange({ from, to })  // Delete the original selected range using captured from/to
+                  .insertContent(resultText)  // Insert the text returned from the API
+                  .run();        
+        }
         toast.success(successMessage, { id: toastId });
      } catch (error) { /* ... handle error ... */ }
      finally {
