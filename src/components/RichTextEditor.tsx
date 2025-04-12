@@ -77,7 +77,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ onSelectionLinks }) => 
   });
 
   // Helper to handle text operations like rewrite, simplify, etc.
-  const handleTextOperation = async (operation: 'rewrite' | 'simplify') => {
+  const handleTextOperation = async (operation: string) => {
     if (!editor || !selectedText || isProcessing) return;
     
     try {
@@ -161,7 +161,6 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ onSelectionLinks }) => 
     }
   }, [isProcessing]);
 
-  // Check if tooltip props match SelectionTooltip component expectations
   return (
     <div className="relative flex-1 overflow-auto bg-white" ref={editorContainerRef}>
       <EditorToolbar editor={editor} />
@@ -173,26 +172,12 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ onSelectionLinks }) => 
       {showTooltip && !isProcessing && (
         <SelectionTooltip
           position={tooltipPosition}
-          // These props match the component's expected props structure
-          onRewrite={(e) => handleTextOperation('rewrite')}
+          onClose={() => setShowTooltip(false)}
+          onRewrite={() => handleTextOperation('rewrite')}
           onSimplify={() => handleTextOperation('simplify')}
-          onMakeLonger={() => console.log('Make longer not implemented')}
-          onMakeShorter={() => console.log('Make shorter not implemented')}
-          onMakeList={() => console.log('Make list not implemented')}
-          onMakeTable={() => console.log('Make table not implemented')}
-          onFindLinks={async () => {
-            // Mock implementation for finding links
-            return [
-              { title: "Example Link", url: "https://example.com" },
-              { title: "Another Link", url: "https://another-example.com" }
-            ];
-          }}
-          onApplyLink={(url, title) => {
-            if (editor && url) {
-              editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
-            }
-          }}
-          isLoading={isProcessing}
+          onExpand={() => handleTextOperation('expand')}
+          onAddLink={handleAddLink}
+          isProcessing={isProcessing}
         />
       )}
     </div>
